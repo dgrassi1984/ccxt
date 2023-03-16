@@ -104,7 +104,7 @@ class AiohttpClient(Client):
             # therefore we need this clause anyway
             else:
                 if self.ping:
-                    await self.send(self.ping(self))
+                    await self.send(self.ping())
                 else:
                     await self.connection.ping()
             await sleep(self.keepAlive / 1000)
