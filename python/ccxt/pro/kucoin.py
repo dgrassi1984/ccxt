@@ -5,6 +5,7 @@
 
 import ccxt.async_support
 from ccxt.async_support.base.ws.cache import ArrayCache, ArrayCacheBySymbolById, ArrayCacheByTimestamp
+from ccxt.async_support.base.ws.functions import iso8601, milliseconds
 from ccxt.base.errors import ExchangeError
 
 
@@ -782,7 +783,9 @@ class kucoin(ccxt.async_support.kucoin):
 
     def handle_pong(self, client, message):
         # https = self.milliseconds()
-        pass
+        client.lastPong = milliseconds()
+        if self.verbose:
+            self.log(iso8601(milliseconds()), 'pong', message)
 
     def handle_error_message(self, client, message):
         return message

@@ -97,14 +97,14 @@ class AiohttpClient(Client):
             now = milliseconds()
             self.lastPong = now if self.lastPong is None else self.lastPong
             if (self.lastPong + self.keepAlive * self.maxPingPongMisses) < now:
-                self.on_error(RequestTimeout('Connection to ' + self.url + ' timed out due to a ping-pong keepalive missing on time'))
+                self.on_error(RequestTimeout('Connection to ' + self.url + ' timed out due to a ping-pong keepalive missing on time (last pong: ', self.lastPong, ', now: ', now, ', keepAlive: ', self.keepAlive, ', maxPingPongMisses: ', self.maxPingPongMisses, ')'))
             # the following ping-clause is not necessary with aiohttp's built-in ws
             # since it has a heartbeat option (see create_connection above)
             # however some exchanges require a text-type ping message
             # therefore we need this clause anyway
             else:
                 if self.ping:
-                    await self.send(self.ping())
+                    await self.send(self.ping(self))
                 else:
                     await self.connection.ping()
             await sleep(self.keepAlive / 1000)
