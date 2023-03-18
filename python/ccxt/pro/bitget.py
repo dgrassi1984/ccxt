@@ -604,6 +604,7 @@ class bitget(ccxt.async_support.bitget):
         #        ]
         #    }
         #
+        # self.log('handle_order', message)
         arg = self.safe_value(message, 'arg', {})
         instType = self.safe_string(arg, 'instType')
         sandboxMode = self.safe_value(self.options, 'sandboxMode', False)
@@ -615,10 +616,14 @@ class bitget(ccxt.async_support.bitget):
         stored = self.orders
         marketSymbols = {}
         for i in range(0, len(data)):
+            # self.log(f"Parsing order {i} of {len(data)}: {data[i]}")
             order = data[i]
             execType = self.safe_string(order, 'execType')
-            if (execType == 'T') and isContractUpdate:
+            status = self.safe_string(order, 'status')
+            # self.log(f"execType: {execType}, status: {status}")
+            if ((execType == 'T') and isContractUpdate) or (status in ('partial-fill')):
                 # partial order updates have the trade info inside
+                # self.log(f"Handling trade for order {order}")
                 self.handle_my_trades(client, order)
             parsed = self.parse_ws_order(order)
             stored.append(parsed)
@@ -785,15 +790,20 @@ class bitget(ccxt.async_support.bitget):
             messageHash = messageHash + ':' + symbol
         type = None
         type, params = self.handle_market_type_and_params('watchMyTrades', market, params)
-        if type == 'spot':
-            raise NotSupported(self.id + ' watchMyTrades is not supported for ' + type + ' markets.')
         sandboxMode = self.safe_value(self.options, 'sandboxMode', False)
+        if type == 'spot':
+            args = {
+                'instType': 'spbl',
+                'channel': 'orders',
+                'instId': 'default',
+            }
+        else:
+            args = {
+                'instType': 'umcbl' if (not sandboxMode) else 'sumcbl',
+                'channel': 'orders',
+                'instId': 'default',
+            }
         subscriptionHash = 'order:trades'
-        args = {
-            'instType': 'umcbl' if (not sandboxMode) else 'sumcbl',
-            'channel': 'orders',
-            'instId': 'default',
-        }
         trades = await self.watch_private(messageHash, subscriptionHash, args, params)
         if self.newUpdates:
             limit = trades.getLimit(symbol, limit)
@@ -834,6 +844,7 @@ class bitget(ccxt.async_support.bitget):
         #       uTime: 1656511777266
         #   }
         #
+        # self.log('handle_my_trades', message)
         if self.myTrades is None:
             limit = self.safe_integer(self.options, 'tradesLimit', 1000)
             self.myTrades = ArrayCache(limit)
@@ -1091,6 +1102,7 @@ class bitget(ccxt.async_support.bitget):
         #        arg: {instType: 'spbl', channel: 'account', instId: 'default'}
         #    }
         #
+        # self.log(f"message: {message}")
         if self.handle_error_message(client, message):
             return
         content = self.safe_string(message, 'message')
